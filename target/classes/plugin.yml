@@ -1,0 +1,18 @@
+name: FunEnchantments
+version: '1.0'
+main: ru.funenchantments.FunEnchantments
+api-version: '1.16'
+authors: [wryuin]
+description: Плагин с кастомными зачарованиями для Minecraft 1.16.5
+
+commands:
+  funenchantments:
+    description: Управление кастомными зачарованиями
+    usage: /funenchantments give <book/pickaxe> <enchantment> [material]
+    aliases: [fenchant]
+    permission: funenchantments.admin
+    
+permissions:
+  funenchantments.admin:
+    description: Доступ к командам плагина FunEnchantments
+    default: op
