@@ -56,7 +56,7 @@ public class BulldozerEnchantment extends CustomEnchantment {
 
     @Override
     public @NotNull Set<EquipmentSlot> getActiveSlots() {
-        return Set.of();
+        return new HashSet<>();
     }
 
     @Override
@@ -109,7 +109,12 @@ public class BulldozerEnchantment extends CustomEnchantment {
                 if (block.getType() != Material.AIR && isMineable(block.getType())) {
                     // Проверяем, что блок можно сломать
                     BlockBreakEvent breakEvent = new BlockBreakEvent(block, player);
-                    block.breakNaturally(tool);
+                    player.getServer().getPluginManager().callEvent(breakEvent);
+                    
+                    // Если событие не отменено (т.е. блок можно сломать)
+                    if (!breakEvent.isCancelled()) {
+                        block.breakNaturally(tool);
+                    }
                 }
             }
         }

@@ -4,6 +4,7 @@ main: ru.funenchantments.FunEnchantments
 api-version: '1.16'
 authors: [wryuin]
 description: Плагин с кастомными зачарованиями для Minecraft 1.16.5
+softdepend: [WorldGuard]
 
 commands:
   funenchantments:
