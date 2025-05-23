@@ -1,60 +1,30 @@
 package ru.funenchantments;
 
-import org.bukkit.command.PluginCommand;
+import ru.funenchantments.commands.GiveEnchantedCommand;
+import ru.funenchantments.enchantments.BulldozerEnchantment;
+import ru.funenchantments.tabcompleters.GiveEnchantedTabCompleter;
+import org.bukkit.Bukkit;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.plugin.java.JavaPlugin;
-import ru.funenchantments.commands.FunEnchantmentsCommand;
-import ru.funenchantments.commands.FunEnchantmentsTabCompleter;
-import ru.funenchantments.enchantments.EnchantmentManager;
-import ru.funenchantments.listeners.EnchantmentListener;
-import org.bukkit.plugin.Plugin;
 
-public final class FunEnchantments extends JavaPlugin {
+public class FunEnchantments extends JavaPlugin {
 
-    private EnchantmentManager enchantmentManager;
-    private boolean worldGuardEnabled = false;
+    private static final Enchantment BULLDOZER = new BulldozerEnchantment();
 
     @Override
     public void onEnable() {
-        // Проверка на наличие WorldGuard
-        Plugin worldGuard = getServer().getPluginManager().getPlugin("WorldGuard");
-        if (worldGuard != null && worldGuard.isEnabled()) {
-            getLogger().info("WorldGuard найден, интеграция включена!");
-            worldGuardEnabled = true;
-        } else {
-            getLogger().warning("WorldGuard не найден, интеграция отключена!");
+        if (Enchantment.getByKey(BULLDOZER.getKey()) == null) {
+            Enchantment.registerEnchantment(BULLDOZER);
         }
-        
-        // Инициализация менеджера зачарований
-        enchantmentManager = new EnchantmentManager(this);
-        enchantmentManager.registerEnchantments();
-        
-        // Регистрация обработчика событий
-        getServer().getPluginManager().registerEvents(new EnchantmentListener(enchantmentManager, this), this);
-        
-        // Регистрация команды
-        PluginCommand command = getCommand("funenchantments");
-        if (command != null) {
-            FunEnchantmentsCommand commandExecutor = new FunEnchantmentsCommand(enchantmentManager);
-            FunEnchantmentsTabCompleter tabCompleter = new FunEnchantmentsTabCompleter(enchantmentManager);
-            
-            command.setExecutor(commandExecutor);
-            command.setTabCompleter(tabCompleter);
-        }
-        
-        getLogger().info("FunEnchantments плагин успешно загружен!");
+
+        getCommand("giveenchanted").setExecutor(new GiveEnchantedCommand());
+        getCommand("giveenchanted").setTabCompleter(new GiveEnchantedTabCompleter());
+
+        Bukkit.getPluginManager().registerEvents(new ru.funenchantments.enchantments.BulldozerEnchantment(), this);
     }
 
     @Override
     public void onDisable() {
-        // Отключение зачарований
-        if (enchantmentManager != null) {
-            enchantmentManager.unregisterEnchantments();
-        }
-        
-        getLogger().info("FunEnchantments плагин отключен!");
-    }
-    
-    public boolean isWorldGuardEnabled() {
-        return worldGuardEnabled;
+//        Enchantment.unregisterEnchantment(BULLDOZER);
     }
 }

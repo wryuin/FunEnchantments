@@ -3,59 +3,44 @@ package ru.funenchantments.enchantments;
 import io.papermc.paper.enchantments.EnchantmentRarity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentTarget;
 import org.bukkit.entity.EntityCategory;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import ru.funenchantments.Hooks.WorldGuardHook;
 
-import java.util.*;
+import java.util.Set;
 
-public class BulldozerEnchantment extends CustomEnchantment {
+public class BulldozerEnchantment extends Enchantment implements Listener {
 
-    public BulldozerEnchantment(JavaPlugin plugin) {
-        super(new NamespacedKey(plugin, "bulldozer"), "Бульдозер", 1);
+    public static final String NAME = "bulldozer";
+    private final int ID = 200; // Custom ID
+
+    public BulldozerEnchantment() {
+        super(key);
+    }
+
+
+    @Override
+    public String getName() {
+        return NAME;
     }
 
     @Override
-    public boolean canEnchantItem(ItemStack item) {
-        return item.getType().toString().contains("PICKAXE"); // Только инструменты-кирки
+    public int getMaxLevel() {
+        return 1;
     }
 
     @Override
-    public @NotNull Component displayName(int level) {
-        return Component.text("Бульдозер " + level);
-    }
-
-    @Override
-    public boolean isTradeable() {
-        return false;
-    }
-
-    @Override
-    public boolean isDiscoverable() {
-        return false;
-    }
-
-    @Override
-    public @NotNull EnchantmentRarity getRarity() {
-        return EnchantmentRarity.COMMON;
-    }
-
-    @Override
-    public float getDamageIncrease(int level, @NotNull EntityCategory entityCategory) {
-        return 0f;
-    }
-
-    @Override
-    public @NotNull Set<EquipmentSlot> getActiveSlots() {
-        return EnumSet.of(EquipmentSlot.HAND);
+    public int getStartLevel() {
+        return 1;
     }
 
     @Override
@@ -74,68 +59,70 @@ public class BulldozerEnchantment extends CustomEnchantment {
     }
 
     @Override
-    public boolean conflictsWith(@NotNull Enchantment other) {
+    public boolean conflictsWith(Enchantment other) {
         return false;
     }
 
     @Override
-    public int getStartLevel() {
-        return 1;
+    public boolean canEnchantItem(ItemStack item) {
+        return item.getType() == Material.DIAMOND_PICKAXE || item.getType() == Material.NETHERITE_PICKAXE;
     }
 
     @Override
-    public int getMaxLevel() {
-        return 3; // Максимально три уровня зачарования
+    public @NotNull Component displayName(int level) {
+        return null;
     }
 
-    public static void handleBlockBreak(BlockBreakEvent event, int level) {
+    @Override
+    public boolean isTradeable() {
+        return false;
+    }
+
+    @Override
+    public boolean isDiscoverable() {
+        return false;
+    }
+
+    @Override
+    public @NotNull EnchantmentRarity getRarity() {
+        return null;
+    }
+
+    @Override
+    public float getDamageIncrease(int level, @NotNull EntityCategory entityCategory) {
+        return 0;
+    }
+
+    @Override
+    public @NotNull Set<EquipmentSlot> getActiveSlots() {
+        return Set.of();
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        ItemStack tool = player.getInventory().getItemInMainHand();
+        ItemStack item = player.getInventory().getItemInMainHand();
 
-        if (tool == null || !tool.getType().toString().contains("PICKAXE")) {
-            return; // Ничего не делаем, если инструмент не кирка
-        }
-
-        Block centerBlock = event.getBlock();
-
-        // Определяем размер зоны захвата в зависимости от уровня зачарования
-        int radius = Math.min(level, 3); // Максимальный радиус захвата ограничен уровнем зачарования
-
-        // Фиксированная сетка сканирования по направлению
-        for (int x = -radius; x <= radius; ++x) {
-            for (int y = -radius; y <= radius; ++y) {
-                for (int z = -radius; z <= radius; ++z) {
-                    if (x == 0 && y == 0 && z == 0) continue; // Исключаем центральный блок
-
-                    Block currentBlock = centerBlock.getRelative(x, y, z);
-
-                    if (currentBlock.getType() != Material.AIR) {
-                        // Генерируем событие взлома блока
-                        BlockBreakEvent breakEvent = new BlockBreakEvent(currentBlock, player);
-                        player.getServer().getPluginManager().callEvent(breakEvent);
-
-                        // Если событие не отменено, выполняем взлом
-                        if (!breakEvent.isCancelled()) {
-                            currentBlock.breakNaturally(tool);
+        if (item.containsEnchantment(this)) {
+            Block block = event.getBlock();
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        Block target = block.getLocation().add(x, y, z).getBlock();
+                        if (!target.getType().isAir()) {
+                            // Проверка через WorldGuard
+                            if (WorldGuardHook.canBreak(player, target)) {
+                                target.breakNaturally(item);
+                            }
                         }
                     }
                 }
             }
+            event.setDropItems(false); // Предотвратить дублирование
         }
     }
 
-    private static List<Block> getBlocksWithinRadius(Block center, int radius) {
-        List<Block> blocks = new ArrayList<>();
-
-        // Собираем блоки в пределах заданного радиуса
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = -radius; y <= radius; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    blocks.add(center.getRelative(x, y, z));
-                }
-            }
-        }
-
-        return blocks;
+    public int getId() {
+        return ID;
     }
 }

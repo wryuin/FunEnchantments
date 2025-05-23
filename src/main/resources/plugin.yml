@@ -3,17 +3,13 @@ version: '1.0'
 main: ru.funenchantments.FunEnchantments
 api-version: '1.16'
 authors: [wryuin]
-description: Плагин с кастомными зачарованиями для Minecraft 1.16.5
-softdepend: [WorldGuard]
-
+description: CustomEnchantments
 commands:
   funenchantments:
-    description: Управление кастомными зачарованиями
-    usage: /funenchantments give <book/pickaxe> <enchantment> [material]
-    aliases: [fenchant]
-    permission: funenchantments.admin
-    
+    description: Выдать enchanted книгу или кирку
+    usage: /giveenchanted <player> [book|diamond_pickaxe|netherite_pickaxe]
+    permission: funenchantments.command
 permissions:
-  funenchantments.admin:
-    description: Доступ к командам плагина FunEnchantments
+  funenchantments.command:
+    description: Разрешение на использование команды /giveenchanted
     default: op
