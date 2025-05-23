@@ -15,23 +15,22 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class BulldozerEnchantment extends CustomEnchantment {
-    
+
     public BulldozerEnchantment(JavaPlugin plugin) {
         super(new NamespacedKey(plugin, "bulldozer"), "Бульдозер", 1);
     }
 
     @Override
     public boolean canEnchantItem(ItemStack item) {
-        return item.getType().toString().contains("PICKAXE");
+        return item.getType().toString().contains("PICKAXE"); // Только инструменты-кирки
     }
 
     @Override
     public @NotNull Component displayName(int level) {
-        return null;
+        return Component.text("Бульдозер " + level);
     }
 
     @Override
@@ -46,17 +45,17 @@ public class BulldozerEnchantment extends CustomEnchantment {
 
     @Override
     public @NotNull EnchantmentRarity getRarity() {
-        return null;
+        return EnchantmentRarity.COMMON;
     }
 
     @Override
     public float getDamageIncrease(int level, @NotNull EntityCategory entityCategory) {
-        return 0;
+        return 0f;
     }
 
     @Override
     public @NotNull Set<EquipmentSlot> getActiveSlots() {
-        return new HashSet<>();
+        return EnumSet.of(EquipmentSlot.HAND);
     }
 
     @Override
@@ -75,75 +74,68 @@ public class BulldozerEnchantment extends CustomEnchantment {
     }
 
     @Override
-    public boolean conflictsWith(Enchantment other) {
+    public boolean conflictsWith(@NotNull Enchantment other) {
         return false;
     }
-    
+
     @Override
     public int getStartLevel() {
         return 1;
     }
-    
+
     @Override
     public int getMaxLevel() {
-        return 1;
+        return 3; // Максимально три уровня зачарования
     }
-    
+
     public static void handleBlockBreak(BlockBreakEvent event, int level) {
         Player player = event.getPlayer();
         ItemStack tool = player.getInventory().getItemInMainHand();
-        
-        if (tool.getType().toString().contains("PICKAXE")) {
-            Block centerBlock = event.getBlock();
-            
-            // Если блок не может быть добыт киркой, не применяем эффект
-            if (!isMineable(centerBlock.getType())) {
-                return;
-            }
-            
-            // Получаем направление взгляда игрока
-            Set<Block> blocks = getBlocksAround(centerBlock);
-            
-            // Ломаем блоки вокруг центрального блока
-            for (Block block : blocks) {
-                if (block.getType() != Material.AIR && isMineable(block.getType())) {
-                    // Проверяем, что блок можно сломать
-                    BlockBreakEvent breakEvent = new BlockBreakEvent(block, player);
-                    player.getServer().getPluginManager().callEvent(breakEvent);
-                    
-                    // Если событие не отменено (т.е. блок можно сломать)
-                    if (!breakEvent.isCancelled()) {
-                        block.breakNaturally(tool);
+
+        if (tool == null || !tool.getType().toString().contains("PICKAXE")) {
+            return; // Ничего не делаем, если инструмент не кирка
+        }
+
+        Block centerBlock = event.getBlock();
+
+        // Определяем размер зоны захвата в зависимости от уровня зачарования
+        int radius = Math.min(level, 3); // Максимальный радиус захвата ограничен уровнем зачарования
+
+        // Фиксированная сетка сканирования по направлению
+        for (int x = -radius; x <= radius; ++x) {
+            for (int y = -radius; y <= radius; ++y) {
+                for (int z = -radius; z <= radius; ++z) {
+                    if (x == 0 && y == 0 && z == 0) continue; // Исключаем центральный блок
+
+                    Block currentBlock = centerBlock.getRelative(x, y, z);
+
+                    if (currentBlock.getType() != Material.AIR) {
+                        // Генерируем событие взлома блока
+                        BlockBreakEvent breakEvent = new BlockBreakEvent(currentBlock, player);
+                        player.getServer().getPluginManager().callEvent(breakEvent);
+
+                        // Если событие не отменено, выполняем взлом
+                        if (!breakEvent.isCancelled()) {
+                            currentBlock.breakNaturally(tool);
+                        }
                     }
                 }
             }
         }
     }
-    
-    private static Set<Block> getBlocksAround(Block center) {
-        Set<Block> blocks = new HashSet<>();
-        
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-                    if (x == 0 && y == 0 && z == 0) continue; // Пропускаем центральный блок
+
+    private static List<Block> getBlocksWithinRadius(Block center, int radius) {
+        List<Block> blocks = new ArrayList<>();
+
+        // Собираем блоки в пределах заданного радиуса
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
                     blocks.add(center.getRelative(x, y, z));
                 }
             }
         }
-        
+
         return blocks;
     }
-    
-    private static boolean isMineable(Material material) {
-        return material.toString().contains("STONE") || 
-               material.toString().contains("ORE") || 
-               material == Material.NETHERRACK || 
-               material == Material.OBSIDIAN || 
-               material == Material.CRYING_OBSIDIAN ||
-               material == Material.ANCIENT_DEBRIS ||
-               material.toString().contains("CONCRETE") ||
-               material.toString().contains("TERRACOTTA") ||
-               material == Material.END_STONE;
-    }
-} 
+}
